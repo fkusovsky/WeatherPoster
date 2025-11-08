@@ -3,7 +3,7 @@ let weatherData;
 let params;
 
 // Replace with your OpenWeather key
-const API_KEY = "YOUR_KEYb9a954dde05a0f81bdc32aa5d03b13a2";
+const API_KEY = "b9a954dde05a0f81bdc32aa5d03b13a2";
 const LAT = 45.52;
 const LON = -122.68;
 
