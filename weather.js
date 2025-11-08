@@ -2,7 +2,7 @@ let weatherData;
 let params;
 
 // Replace with your OpenWeather API key
-const API_KEY = "YOUR_KEY";
+const API_KEY = "b9a954dde05a0f81bdc32aa5d03b13a2";
 
 // Fetch weather for specific coordinates
 async function fetchWeather(lat, lon) {
