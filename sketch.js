@@ -14,11 +14,12 @@ function setup() {
     waveOffsets.push(random(1000));
   }
 
-  fetchWeather();
+  // Get weather based on user location
+  getUserWeather();
 }
 
 function draw() {
-  if (!params) return;
+  if (!params) return; // wait until weather data is loaded
 
   // 1. Vertical temperature gradient
   for (let y = 0; y < height; y++) {
@@ -73,3 +74,4 @@ function draw() {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
+
