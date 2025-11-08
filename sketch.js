@@ -25,8 +25,11 @@ function draw() {
 
   for (let y = 0; y < height; y++) {
     // Base gradient interpolation
-    let topColor = color(200, 70, 50); // blue
-    let bottomColor = color(20, 80, 60); // red
+   let topColor = color(0, 120, 255);    // RGB blue
+let bottomColor = color(255, 80, 30); // RGB red/orange
+
+// Interpolate using lerpColor(topColor, bottomColor, tNorm)
+
 
     let interColor = lerpColor(topColor, bottomColor, tNorm);
 
