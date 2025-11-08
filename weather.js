@@ -2,37 +2,61 @@ let weatherData;
 let params;
 
 // Replace with your OpenWeather API key
-const API_KEY = "b9a954dde05a0f81bdc32aa5d03b13a2";
+const API_KEY = "YOUR_KEY";
 
 // Fetch weather for specific coordinates
 async function fetchWeather(lat, lon) {
   try {
-    const res = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+    // 1. Find nearby cities/stations
+    const nearbyRes = await fetch(
+      `https://api.openweathermap.org/data/2.5/find?lat=${lat}&lon=${lon}&cnt=5&units=metric&appid=${API_KEY}`
     );
-    const data = await res.json();
+    const nearbyData = await nearbyRes.json();
 
-    if (data.cod !== 200) {
-      console.error("Weather fetch error:", data);
+    if (!nearbyData.list || nearbyData.list.length === 0) {
+      console.error("No nearby weather stations found, falling back.");
       return;
     }
 
-    weatherData = data;
+    // 2. Pick the closest station
+    let closest = nearbyData.list[0];
+    let minDist = distance(lat, lon, closest.coord.lat, closest.coord.lon);
+    for (let station of nearbyData.list) {
+      let d = distance(lat, lon, station.coord.lat, station.coord.lon);
+      if (d < minDist) {
+        minDist = d;
+        closest = station;
+      }
+    }
 
-    const temp = data.main.temp;
+    weatherData = closest;
+
     params = {
-      temp: temp,
+      temp: closest.main.temp,
       tempMin: -10,
       tempMax: 35,
-      windSpeed: data.wind.speed,
-      windDir: data.wind.deg,
-      location: `${data.name}, ${data.sys.country}`
+      windSpeed: closest.wind.speed,
+      windDir: closest.wind.deg,
+      location: `${closest.name}, ${closest.sys.country}`
     };
 
-    console.log("Weather data loaded:", params);
+    console.log("Weather data loaded (nearest station):", params);
   } catch (err) {
     console.error(err);
   }
+}
+
+// Haversine formula to calculate distance between lat/lon in km
+function distance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = radians(lat2 - lat1);
+  const dLon = radians(lon2 - lon1);
+  const a =
+    sin(dLat/2) * sin(dLat/2) +
+    cos(radians(lat1)) * cos(radians(lat2)) *
+    sin(dLon/2) * sin(dLon/2);
+  const c = 2 * atan2(sqrt(a), sqrt(1-a));
+  return R * c;
 }
 
 // Get weather based on user's geolocation
