@@ -9,12 +9,12 @@ function setup() {
   textSize(40);
   noStroke();
 
-  // Initialize wave offsets for natural motion
+  // Initialize wave offsets for smooth animation
   for (let i = 0; i < waveCount; i++) {
     waveOffsets.push(random(1000));
   }
 
-  // Get weather based on user location
+  // Fetch weather based on user location
   getUserWeather();
 }
 
@@ -74,4 +74,3 @@ function draw() {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
-
