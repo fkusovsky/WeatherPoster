@@ -1,4 +1,3 @@
-let params;
 let waveCount = 12;
 let waveSpacing;
 let waveOffsets = [];
