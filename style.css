@@ -1,19 +1,12 @@
-body {
+html, body {
   margin: 0;
-  background: #111;
-  color: #eee;
-  font-family: sans-serif;
-  display: flex;
-  justify-content: center;
-}
-
-main {
-  max-width: 640px;
-  padding: 20px;
-  text-align: center;
+  padding: 0;
+  overflow: hidden;
+  font-family: "Helvetica Neue", sans-serif;
+  background: #000;
+  color: #fff;
 }
 
 canvas {
-  border: 1px solid #333;
-  margin-top: 20px;
+  display: block;
 }

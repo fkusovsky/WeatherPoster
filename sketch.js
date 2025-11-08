@@ -1,56 +1,71 @@
-let params = null;
-let lastUpdate = 0;
+let params;
+let waveCount = 12;
+let waveSpacing;
+let waveOffsets = [];
 
 function setup() {
-  // Poster aspect (1080x1620)
-  const c = createCanvas(540, 810); 
-  c.parent("poster-container");
+  createCanvas(windowWidth, windowHeight);
   colorMode(HSL);
+  textAlign(CENTER, CENTER);
+  textSize(40);
+  noStroke();
 
-  fetchAndUpdate();
-  setInterval(fetchAndUpdate, 10 * 60 * 1000); // every 10 min
-}
+  // Initialize wave offsets for natural motion
+  for (let i = 0; i < waveCount; i++) {
+    waveOffsets.push(random(1000));
+  }
 
-async function fetchAndUpdate() {
-  const weather = await getWeather();
-  params = mapWeatherToParams(weather);
+  fetchWeather();
 }
 
 function draw() {
-  if (!params) return;
+  if (!weatherData || !params) return;
 
-  background(params.hue, 60, 30 * params.brightness);
+  // 1. Dynamic background gradient based on temperature + subtle time-based shift
+  let tNorm = constrain((params.temp - params.tempMin) / (params.tempMax - params.tempMin), 0, 1);
 
-  // Shape noise
-  randomSeed(frameCount);
+  for (let y = 0; y < height; y++) {
+    // Base gradient interpolation
+    let topColor = color(200, 70, 50); // blue
+    let bottomColor = color(20, 80, 60); // red
 
-  // Draw a few shapes based on weather
-  push();
-  translate(width / 2, height / 2);
-  rotate(radians(params.angle));
-  
-  noStroke();
-  fill((params.hue + 30) % 360, 70, 60 * params.brightness);
+    let interColor = lerpColor(topColor, bottomColor, tNorm);
 
-  // Main shape
-  ellipse(0, 0, 300, 400);
-
-  // Cloudiness texture
-  for (let i = 0; i < 150; i++) {
-    fill((params.hue + 10) % 360, 40, random(20, 40));
-    ellipse(
-      random(-200, 200),
-      random(-300, 300),
-      random(5, 20),
-      random(5, 20)
-    );
+    // Add subtle hue oscillation for liveliness
+    let hueShift = sin(frameCount * 0.002 + y*0.01) * 5;
+    let c = lerpColor(interColor, color((hue(interColor) + hueShift)%360, saturation(interColor), lightness(interColor)), y / height);
+    stroke(c);
+    line(0, y, width, y);
   }
-  pop();
 
-  // Add blur if humidity is high
-  if (params.blur > 1) {
-    drawingContext.filter = `blur(${params.blur}px)`;
-  } else {
-    drawingContext.filter = "none";
+  // 2. Wind waves (animated, layered)
+  waveSpacing = height / waveCount;
+  for (let i = 0; i < waveCount; i++) {
+    let yBase = i * waveSpacing + waveSpacing / 2;
+    let waveAmp = params.windSpeed * 5;  // amplitude based on wind
+    let waveFreq = 0.015;                // frequency
+    let speed = 0.03 + i * 0.002;        // slight variation per wave layer
+
+    beginShape();
+    fill(0, 0, 100, 0.03);  // soft translucent white
+    for (let x = 0; x <= width; x += 10) {
+      // Combine sine + perlin noise for smooth organic motion
+      let yOffset = sin((x * waveFreq) + frameCount * speed + waveOffsets[i]) * waveAmp;
+      yOffset += (noise(x*0.005, i*0.1, frameCount*0.002) - 0.5) * 10; // subtle random wiggle
+      vertex(x, yBase + yOffset);
+    }
+    vertex(width, height);
+    vertex(0, height);
+    endShape(CLOSE);
   }
+
+  // 3. Overlay text info (center)
+  fill(0,0,100);
+  text(`${params.location}\n${params.temp.toFixed(1)}°C, Wind ${params.windSpeed.toFixed(1)} m/s`, width / 2, height / 2);
 }
+
+// 4. Responsive canvas
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
