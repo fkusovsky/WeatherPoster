@@ -4,10 +4,10 @@ let params;
 // Replace with your OpenWeather API key
 const API_KEY = "b9a954dde05a0f81bdc32aa5d03b13a2";
 
-// Fetch weather for specific coordinates and pick nearest station
+// Fetch weather for coordinates and interpolate nearest 2–3 stations
 async function fetchWeather(lat, lon) {
   try {
-    // Find nearby cities/stations
+    // 1. Find nearby cities/stations (max 5)
     const nearbyRes = await fetch(
       `https://api.openweathermap.org/data/2.5/find?lat=${lat}&lon=${lon}&cnt=5&units=metric&appid=${API_KEY}`
     );
@@ -18,29 +18,46 @@ async function fetchWeather(lat, lon) {
       return;
     }
 
-    // Pick closest station
-    let closest = nearbyData.list[0];
-    let minDist = distance(lat, lon, closest.coord.lat, closest.coord.lon);
-    for (let station of nearbyData.list) {
-      let d = distance(lat, lon, station.coord.lat, station.coord.lon);
-      if (d < minDist) {
-        minDist = d;
-        closest = station;
-      }
-    }
+    // 2. Sort stations by distance
+    const stations = nearbyData.list.map(station => {
+      return {
+        ...station,
+        distance: distance(lat, lon, station.coord.lat, station.coord.lon)
+      };
+    }).sort((a, b) => a.distance - b.distance);
 
-    weatherData = closest;
+    // 3. Pick top 2–3 closest stations for interpolation
+    const topStations = stations.slice(0, 3);
+
+    // Weighted average by inverse distance
+    let tempSum = 0;
+    let windSum = 0;
+    let weightSum = 0;
+
+    topStations.forEach(station => {
+      const weight = 1 / (station.distance + 0.001); // avoid division by zero
+      tempSum += station.main.temp * weight;
+      windSum += station.wind.speed * weight;
+      weightSum += weight;
+    });
+
+    const tempInterpolated = tempSum / weightSum;
+    const windInterpolated = windSum / weightSum;
+
+    // Use nearest station for location label
+    const nearestStation = topStations[0];
 
     params = {
-      temp: closest.main.temp,
+      temp: tempInterpolated,
       tempMin: -10,
       tempMax: 35,
-      windSpeed: closest.wind.speed,
-      windDir: closest.wind.deg,
-      location: `${closest.name}, ${closest.sys.country}`
+      windSpeed: windInterpolated,
+      windDir: nearestStation.wind.deg,
+      location: `${nearestStation.name}, ${nearestStation.sys.country}`
     };
 
-    console.log("Weather data loaded (nearest station):", params);
+    console.log("Weather data loaded (interpolated):", params);
+
   } catch (err) {
     console.error("Error fetching weather:", err);
   }
@@ -59,37 +76,35 @@ function distance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Get user coordinates: try browser geolocation first, then IP fallback
+// Get user coordinates: browser geolocation first, then IP fallback
 async function getUserWeather() {
   let lat, lon;
 
-  // 1. Try browser geolocation
+  // Browser geolocation
   const geoPromise = new Promise((resolve) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          });
-        },
-        () => resolve(null), // failed or denied
+        (position) => resolve({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        }),
+        () => resolve(null),
         { timeout: 5000 }
       );
     } else {
-      resolve(null); // not supported
+      resolve(null);
     }
   });
 
-  let geo = await geoPromise;
+  const geo = await geoPromise;
 
-  if (geo && geo.accuracy < 50000) { // <50km is acceptable
+  if (geo && geo.accuracy < 50000) { // <50 km
     lat = geo.lat;
     lon = geo.lon;
     console.log("Using browser geolocation:", lat, lon);
   } else {
-    // 2. Fallback to IP-based geolocation
+    // IP fallback
     try {
       const ipRes = await fetch("https://ipapi.co/json/");
       const ipData = await ipRes.json();
@@ -103,6 +118,6 @@ async function getUserWeather() {
     }
   }
 
-  // 3. Fetch weather from nearest station
+  // Fetch weather with interpolation
   fetchWeather(lat, lon);
 }
