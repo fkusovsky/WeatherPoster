@@ -53,4 +53,23 @@ function getUserWeather() {
     fetchWeather(45.52, -122.68);
   }
 }
+// Get weather based on user's geolocation
+function getUserWeather() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        fetchWeather(lat, lon);
+      },
+      (err) => {
+        console.warn("Geolocation failed, using default location.");
+        fetchWeather(45.52, -122.68); // fallback: Portland
+      }
+    );
+  } else {
+    console.warn("Geolocation not supported, using default location.");
+    fetchWeather(45.52, -122.68); // fallback: Portland
+  }
+}
 
